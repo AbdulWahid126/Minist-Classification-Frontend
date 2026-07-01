@@ -283,7 +283,7 @@ if uploaded_file:
                 }
 
                 response = requests.post(
-                    "https://farooqdaniyal-wahid-miniest-backend.hf.space/"
+                    "https://farooqdaniyal-wahid-miniest-backend.hf.space/predict",
                     ## "https://farooqdaniyal-mnist-backend.hf.space/predict",
                     files=files,
                     timeout=20
