@@ -6,7 +6,7 @@ from PIL import Image
 
 st.set_page_config(
     page_title="MNIST Neural Classifier",
-    page_icon="◈",
+    page_icon="▓",
     layout="centered"
 )
 
@@ -15,204 +15,329 @@ st.set_page_config(
 st.markdown("""
 <style>
 
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
-html, body, [class*="css"] {
-    font-family: 'Inter', sans-serif;
+html, body, [class*="css"], p, span, div, label, input, textarea {
+    font-family: 'JetBrains Mono', monospace !important;
 }
 
-/* ---- Animated grid background, evokes a network "reading" pixels ---- */
+/* ---- Base canvas: pure black with a faint CRT scanline sweep ---- */
 .stApp {
-    background-color: #0B0E1A;
+    background-color: #000000;
     background-image:
-        linear-gradient(rgba(99, 102, 241, 0.07) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(99, 102, 241, 0.07) 1px, transparent 1px);
-    background-size: 28px 28px;
-    background-position: center;
+        linear-gradient(rgba(0, 255, 65, 0.035) 1px, transparent 1px);
+    background-size: 100% 3px;
+}
+
+.stApp::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.6) 100%);
+    z-index: 0;
+}
+
+.block-container {
+    max-width: 740px;
+    padding-top: 2.2rem;
+}
+
+/* ---- Terminal window chrome around the whole page ---- */
+.term-titlebar {
+    background: #0A0F0A;
+    border: 1px solid #1F3D1F;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    padding: 9px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.term-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    background: #1F3D1F;
+}
+
+.term-titlebar-label {
+    margin-left: 8px;
+    color: #3D8B3D;
+    font-size: 12px;
+    letter-spacing: 1px;
+}
+
+.term-body {
+    background: #050805;
+    border: 1px solid #1F3D1F;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    padding: 26px 28px 20px 28px;
 }
 
 /* ---- Hero header ---- */
 .hero-wrap {
-    text-align: center;
-    padding: 18px 0 8px 0;
+    padding: 4px 0 26px 0;
 }
 
 .hero-eyebrow {
-    font-family: 'Space Grotesk', sans-serif;
-    color: #6366F1;
-    font-size: 13px;
-    letter-spacing: 3px;
-    font-weight: 600;
-    text-transform: uppercase;
+    color: #3D8B3D;
+    font-size: 12px;
+    letter-spacing: 2px;
+}
+
+.hero-eyebrow::before {
+    content: "# ";
+    color: #1F3D1F;
 }
 
 .hero-title {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 42px;
+    font-size: 34px;
     font-weight: 700;
-    color: #F1F5F9;
-    margin: 6px 0 4px 0;
+    color: #00FF41;
+    margin: 10px 0 10px 0;
     letter-spacing: -0.5px;
+    text-shadow: 0 0 14px rgba(0, 255, 65, 0.45);
 }
 
 .hero-title span {
-    color: #6366F1;
+    color: #66FF99;
 }
 
 .hero-subtitle {
-    color: #64748B;
-    font-size: 15px;
-    font-weight: 400;
-    margin-bottom: 28px;
+    color: #2E7D2E;
+    font-size: 14px;
+    margin-bottom: 2px;
+}
+
+.hero-subtitle .prompt {
+    color: #00FF41;
+}
+
+.blink-cursor {
+    display: inline-block;
+    width: 8px;
+    height: 14px;
+    background: #00FF41;
+    margin-left: 4px;
+    animation: blink 1.1s steps(1) infinite;
+    vertical-align: -2px;
+}
+
+@keyframes blink {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0; }
 }
 
 /* ---- Upload zone container ---- */
 .upload-card {
-    background: #12162A;
-    border: 1px solid #1E2438;
-    border-radius: 16px;
-    padding: 24px;
-    margin-bottom: 20px;
+    background: #050805;
+    border: 1px dashed #1F3D1F;
+    border-radius: 4px;
+    padding: 20px 22px;
+    margin: 20px 0 18px 0;
+    position: relative;
+}
+
+.upload-card::before {
+    content: "[ input_stream ]";
+    position: absolute;
+    top: -9px;
+    left: 16px;
+    background: #050805;
+    padding: 0 8px;
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: #2E7D2E;
 }
 
 div[data-testid="stFileUploader"] {
-    border-radius: 12px;
+    border-radius: 4px;
 }
 
 div[data-testid="stFileUploaderDropzone"] {
-    background: #161B2E;
-    border: 1.5px dashed #2D3454;
-    border-radius: 12px;
+    background: #0A0F0A;
+    border: 1px solid #1F3D1F !important;
+    border-radius: 4px;
+    transition: border-color 0.2s ease, background 0.2s ease;
 }
 
 div[data-testid="stFileUploaderDropzone"]:hover {
-    border-color: #6366F1;
+    border-color: #00FF41 !important;
+    background: #0D140D;
+}
+
+div[data-testid="stFileUploaderDropzone"] * {
+    color: #3D8B3D !important;
+}
+
+div[data-testid="stFileUploader"] button {
+    background: #0A0F0A !important;
+    color: #00FF41 !important;
+    border: 1px solid #1F3D1F !important;
+    border-radius: 3px !important;
 }
 
 /* ---- Preview panel ---- */
 .preview-label {
-    font-family: 'Space Grotesk', sans-serif;
-    color: #94A3B8;
-    font-size: 12px;
+    color: #2E7D2E;
+    font-size: 11px;
     letter-spacing: 2px;
     text-transform: uppercase;
     margin-bottom: 10px;
 }
 
+.preview-label::before {
+    content: "> ";
+    color: #00FF41;
+}
+
 .scan-frame {
-    border: 1px solid #2D3454;
-    border-radius: 14px;
+    border: 1px solid #1F3D1F;
+    border-radius: 4px;
     padding: 14px;
-    background: #0F1322;
-    text-align: center;
-    position: relative;
-}
-
-.scan-frame img {
-    border-radius: 8px;
-}
-
-/* ---- Predict button ---- */
-div.stButton > button {
-    background: linear-gradient(135deg, #6366F1, #4F46E5);
-    color: white;
-    font-family: 'Space Grotesk', sans-serif;
-    font-weight: 600;
-    font-size: 15px;
-    letter-spacing: 0.5px;
-    border: none;
-    border-radius: 10px;
-    padding: 12px 0;
-    box-shadow: 0 4px 18px rgba(99, 102, 241, 0.35);
-    transition: all 0.2s ease;
-}
-
-div.stButton > button:hover {
-    box-shadow: 0 6px 24px rgba(99, 102, 241, 0.55);
-    transform: translateY(-1px);
-}
-
-div.stButton > button:active {
-    transform: translateY(0px);
-}
-
-/* ---- Result card ---- */
-.result-box {
-    margin-top: 8px;
-    padding: 30px;
-    border-radius: 18px;
-    background: linear-gradient(160deg, #161B2E 0%, #12162A 100%);
-    border: 1px solid #2D3454;
+    background: #030503;
     text-align: center;
     position: relative;
     overflow: hidden;
 }
 
-.result-box::before {
+.scan-frame::before {
     content: "";
     position: absolute;
-    top: -40%;
-    left: 50%;
-    width: 200px;
-    height: 200px;
-    background: radial-gradient(circle, rgba(245, 158, 11, 0.18), transparent 70%);
-    transform: translateX(-50%);
-    pointer-events: none;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #00FF41, transparent);
+    animation: scanline 2.6s linear infinite;
+    opacity: 0.7;
+}
+
+@keyframes scanline {
+    0% { top: 0%; }
+    100% { top: 100%; }
+}
+
+.scan-frame img {
+    border-radius: 2px;
+    position: relative;
+    z-index: 1;
+    filter: grayscale(15%);
+}
+
+/* ---- Action hint + button ---- */
+.hint-box {
+    background: #0A0F0A;
+    border-left: 2px solid #00FF41;
+    border-radius: 2px;
+    padding: 12px 14px;
+    color: #4CAF50;
+    font-size: 13px;
+    line-height: 1.5;
+    margin-bottom: 16px;
+}
+
+.hint-box::before {
+    content: "// ";
+    color: #1F3D1F;
+}
+
+div.stButton > button {
+    background: #0A0F0A;
+    color: #00FF41;
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+    border: 1px solid #00FF41;
+    border-radius: 3px;
+    padding: 11px 0;
+    box-shadow: 0 0 0px rgba(0, 255, 65, 0);
+    transition: all 0.15s ease;
+}
+
+div.stButton > button:hover {
+    background: #00FF41;
+    color: #000000;
+    box-shadow: 0 0 22px rgba(0, 255, 65, 0.55);
+}
+
+div.stButton > button:active {
+    transform: translateY(1px);
+}
+
+div.stButton > button:focus-visible {
+    outline: 1px solid #66FF99;
+    outline-offset: 2px;
+}
+
+div.stButton > button p {
+    color: inherit !important;
+}
+
+/* ---- Result card ---- */
+.result-box {
+    margin-top: 6px;
+    padding: 28px 26px;
+    border-radius: 4px;
+    background: #030503;
+    border: 1px solid #1F3D1F;
+    text-align: left;
+    position: relative;
 }
 
 .result-title {
-    font-family: 'Space Grotesk', sans-serif;
-    color: #64748B;
-    font-size: 12px;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    margin-bottom: 14px;
-    position: relative;
-    z-index: 1;
+    color: #2E7D2E;
+    font-size: 11px;
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+}
+
+.result-title::before {
+    content: "$ ";
+    color: #00FF41;
+}
+
+.result-digit-row {
+    display: flex;
+    align-items: baseline;
+    gap: 18px;
+    margin: 10px 0 14px 2px;
 }
 
 .result-digit {
-    font-family: 'Space Grotesk', sans-serif;
-    color: #F59E0B;
-    font-size: 76px;
+    color: #00FF41;
+    font-size: 72px;
     font-weight: 700;
     line-height: 1;
-    text-shadow: 0 0 30px rgba(245, 158, 11, 0.4);
-    position: relative;
-    z-index: 1;
+    text-shadow: 0 0 24px rgba(0, 255, 65, 0.55);
 }
 
 .result-caption {
-    color: #475569;
-    font-size: 13px;
-    margin-top: 10px;
-    position: relative;
-    z-index: 1;
+    color: #2E7D2E;
+    font-size: 12px;
+    letter-spacing: 0.5px;
 }
 
-/* ---- Info hint box ---- */
-.hint-box {
-    background: #161B2E;
-    border-left: 3px solid #6366F1;
-    border-radius: 8px;
-    padding: 14px 16px;
-    color: #94A3B8;
-    font-size: 14px;
-    margin-bottom: 16px;
+.result-caption::before {
+    content: "[ OK ] ";
+    color: #00FF41;
 }
 
 /* ---- Footer ---- */
 .footer {
     text-align: center;
-    color: #2D3454;
-    margin-top: 60px;
-    font-size: 12px;
+    color: #1A2E1A;
+    margin-top: 40px;
+    font-size: 11px;
     letter-spacing: 1px;
-    font-family: 'Space Grotesk', sans-serif;
 }
 
 .footer span {
-    color: #475569;
+    color: #2E5A2E;
 }
 
 /* Hide default streamlit chrome */
@@ -220,17 +345,45 @@ div.stButton > button:active {
 footer {visibility: hidden;}
 header {visibility: hidden;}
 
+/* Error box recolor to fit theme */
+div[data-testid="stAlert"] {
+    background: #0A0F0A !important;
+    border: 1px solid #7A1F1F !important;
+    color: #FF6B6B !important;
+    border-radius: 4px !important;
+}
+
+/* Spinner text recolor */
+div[data-testid="stSpinner"] > div {
+    color: #00FF41 !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
+
+# ---------------- TERMINAL SHELL START ----------------
+
+st.markdown(
+    """
+    <div class='term-titlebar'>
+        <span class='term-dot' style='background:#7A2E2E;'></span>
+        <span class='term-dot' style='background:#7A6E2E;'></span>
+        <span class='term-dot' style='background:#2E7A3D;'></span>
+        <span class='term-titlebar-label'>user@classifier: ~/mnist</span>
+    </div>
+    <div class='term-body'>
+    """,
+    unsafe_allow_html=True
+)
 
 # ---------------- HERO ----------------
 
 st.markdown(
     """
     <div class='hero-wrap'>
-        <div class='hero-eyebrow'>Deep Learning · Computer Vision</div>
+        <div class='hero-eyebrow'>deep_learning / computer_vision</div>
         <div class='hero-title'>MNIST <span>Neural</span> Classifier</div>
-        <div class='hero-subtitle'>Upload a handwritten digit — the network reads it pixel by pixel</div>
+        <div class='hero-subtitle'><span class='prompt'>$</span> upload a handwritten digit — the network reads it pixel by pixel<span class='blink-cursor'></span></div>
     </div>
     """,
     unsafe_allow_html=True
@@ -257,26 +410,26 @@ if uploaded_file:
     col1, col2 = st.columns([1, 1.2])
 
     with col1:
-        st.markdown("<div class='preview-label'>Input</div>", unsafe_allow_html=True)
+        st.markdown("<div class='preview-label'>input</div>", unsafe_allow_html=True)
         st.markdown("<div class='scan-frame'>", unsafe_allow_html=True)
         st.image(image, width=180)
         st.markdown("</div>", unsafe_allow_html=True)
 
     with col2:
-        st.markdown("<div class='preview-label'>Action</div>", unsafe_allow_html=True)
+        st.markdown("<div class='preview-label'>action</div>", unsafe_allow_html=True)
         st.markdown(
             "<div class='hint-box'>Network expects a single digit, "
             "centered, on a plain background.</div>",
             unsafe_allow_html=True
         )
-        predict_btn = st.button("Run Prediction", use_container_width=True)
+        predict_btn = st.button("./run_prediction.sh", use_container_width=True)
 
     # ---------------- PREDICTION ----------------
 
     if predict_btn:
 
         try:
-            with st.spinner("Reading pixels through the network..."):
+            with st.spinner("reading pixels through the network..."):
 
                 files = {
                     "file": uploaded_file.getvalue()
@@ -294,9 +447,11 @@ if uploaded_file:
             st.markdown(
                 f"""
                 <div class='result-box'>
-                    <div class='result-title'>Predicted Digit</div>
-                    <div class='result-digit'>{prediction}</div>
-                    <div class='result-caption'>Inference complete</div>
+                    <div class='result-title'>predict --input=upload</div>
+                    <div class='result-digit-row'>
+                        <div class='result-digit'>{prediction}</div>
+                    </div>
+                    <div class='result-caption'>inference complete</div>
                 </div>
                 """,
                 unsafe_allow_html=True
@@ -310,7 +465,8 @@ if uploaded_file:
 st.markdown(
     """
     <div class='footer'>
-        BUILT WITH <span>TENSORFLOW · FASTAPI · STREAMLIT</span>
+        built with <span>tensorflow · fastapi · streamlit</span>
+    </div>
     </div>
     """,
     unsafe_allow_html=True
